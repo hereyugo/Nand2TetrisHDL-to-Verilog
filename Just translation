@@ -1,0 +1,55 @@
+import re
+
+def nand_hdl_to_verilog(hdl_text):
+    chip = parse_nand_hdl(hdl_text)
+    ports = chip["inputs"] + chip["outputs"]
+    inportz = chip["inputs"]
+    wires = set()
+    body = []
+
+    for idx, part in enumerate(chip["parts"]):
+        m = re.match(r'(\w+)\s*\((.*)\)', part)
+        if not m:
+            raise ValueError(f"Invalid part line: '{part}'")
+        gate, conn_str = m.group(1), m.group(2)
+        conn_dict = dict()
+        for conn in conn_str.split(','):
+            if '=' not in conn:
+                continue
+            key_value = conn.strip().split('=', 1)
+            if len(key_value) != 2:
+                raise ValueError(f"Malformed connection: '{conn}'")
+            key, value = key_value[0].strip(), key_value[1].strip()
+            conn_dict[key] = value
+
+        # Track internal wires
+        for signal in conn_dict.values():
+            if signal not in chip["inputs"] and signal not in chip["outputs"]:
+                wires.add(signal)
+
+        instance = f"{gate} {gate.lower()}_{idx}("
+        instance += ", ".join([f".{pin}({sig})" for pin, sig in conn_dict.items()])
+        instance += ");"
+        body.append(instance)
+
+    verilog_lines = [f"module {chip['name']}("]
+    for inp in chip['inputs']:
+        if chip['inputs']:
+            verilog_lines.append(f"  input {inp},")
+            
+    for j, oup in enumerate(chip['outputs']):    
+        if j == len(chip['outputs']) - 1:
+            verilog_lines.append(f"  output {oup}\n);\n")
+        else:
+            verilog_lines.append(f"  output {oup},")
+            
+    for k, wir in enumerate(wires):        
+        if k == len(wires) - 1:
+            verilog_lines.append(f"  wire {wir};\n")
+        else:
+            verilog_lines.append(f"  wire {wir},")
+            
+    verilog_lines += [f"  {line}" for line in body]
+    verilog_lines.append("\nendmodule")
+
+    return "\n".join(verilog_lines)
