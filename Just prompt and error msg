@@ -1,0 +1,21 @@
+print("📥 Insert your Nand HDL code below (finish with an empty line, no empty lines in the code, comments are fine):")
+lines = []
+while True:
+    try:
+        line = input()
+        if line.strip() == "":
+            break
+        lines.append(line)
+    except EOFError:
+        break
+
+examplehdl = "\n".join(lines)
+
+try:
+    out = nand_hdl_to_verilog(examplehdl)
+    print("\n✅ Translated Verilog code:\n")
+    print(out)
+except Exception as e:
+    print("\n❌ Error: Could not translate HDL.")
+    print("Details:", e)
+    traceback.print_exc()
